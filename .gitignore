@@ -9,3 +9,5 @@ coverage/
 .DS_Store
 Thumbs.db
 project.private.config.json
+test-results/
+playwright-report/

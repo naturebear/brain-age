@@ -1,0 +1,16 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: dev
+    ports:
+      - "${BRAINAGE_DEV_BIND:-127.0.0.1}:5173:5173"
+    volumes:
+      - ./apps/web:/app
+      - web_dependencies:/app/node_modules
+    environment:
+      CHOKIDAR_USEPOLLING: "${BRAINAGE_WATCH_POLLING:-false}"
+    command: ["sh", "-c", "npm ci && npm run dev -- --host 0.0.0.0"]
+volumes:
+  web_dependencies:
