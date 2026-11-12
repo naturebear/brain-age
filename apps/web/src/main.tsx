@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { HashRouter, Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { attention, memory, radar, sequence, type Mode, type Attempt, type Session, type Training } from './domain'
 import { Task } from './Task'
+import { MemoryCards } from './MemoryCards'
 import './style.css'
 
 const prefix = 'brainage.v1.'
@@ -114,8 +115,12 @@ function Result() {
     {completed.map(current => { const previous = records().flatMap(r => 'attempts' in r && r.id !== s.id && r.date < s.date ? r.attempts : []).find(p => p.complete && !p.flags.length && !current.flags.length && p.kind === current.kind && p.version === current.version && p.mode === current.mode && p.device === current.device); return <p key={current.id}>{title(current.kind)} · {previous ? '相较上次正确表现 ' + fmt(current.kind === 'memory' ? (memory(current.trials).exact - memory(previous.trials).exact) / 8 * 100 : (attention(current.trials).hits - attention(previous.trials).hits) / 70 * 100) + ' 个百分点' : '暂无可比较记录'}</p> })}
     <p>状态记录 · 睡眠 {s.sleep ? s.sleep + ' 小时' : '未填写'} · {s.sleepy || '困倦未填写'} · {s.focus || '专注未填写'}</p><p>重复练习、设备和当天状态会影响表现。</p></section><div className="row"><Link className="primary" to="/training">选择练习</Link><Link to="/history">我的记录</Link></div></>
 }
+function saveCardGame(summary: string) {
+  return save({ schemaVersion: 1, id: crypto.randomUUID(), date: new Date().toISOString(), kind: 'cards', summary })
+}
+
 function TrainingMenu() {
-  return <><h1>练习专注</h1><div className="hero"><section className="panel"><h2>空间记忆练习</h2><p>最多 12 题，难度随答题表现变化。</p><Link className="primary" to="/training/memory">开始空间记忆</Link></section><section className="panel"><h2>五分钟正念</h2><p>留意自然呼吸，发现走神后把注意带回来。</p><Link className="primary" to="/training/mindfulness">开始正念</Link></section></div></>
+  return <><h1>练习专注</h1><div className="hero"><section className="panel"><h2>空间记忆练习</h2><p>最多 12 题，难度随答题表现变化。</p><Link className="primary" to="/training/memory">开始空间记忆</Link></section><section className="panel"><h2>五分钟正念</h2><p>留意自然呼吸，发现走神后把注意带回来。</p><Link className="primary" to="/training/mindfulness">开始正念</Link></section><section className="panel"><h2>「神经衰弱」记忆翻牌</h2><p>记住扑克牌的位置，与电脑或身边的朋友比拼配对。</p><Link className="primary" to="/training/cards">开始记忆翻牌</Link></section></div></>
 }
 function MemoryTraining() {
   const [level, setLevel] = useState(3)
@@ -184,7 +189,7 @@ function History() {
   const [revision, refresh] = useState(0)
   useEffect(() => { const update = () => refresh(v => v + 1); window.addEventListener('storage', update); return () => window.removeEventListener('storage', update) }, [])
   const list = records().filter(r => 'attempts' in r ? filter !== 'training' && r.attempts.length > 0 : filter !== 'assessment')
-  return <><h1>我的记录</h1><label>记录类型<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">全部</option><option value="assessment">测评</option><option value="training">训练</option></select></label>{storageError && <p role="status">部分记录可能无法读取或保存。</p>}{!list.length && <p>还没有记录。</p>}<div className="stack" key={revision}>{list.map(r => <section className="panel row" key={r.id}><div><h2>{'attempts' in r ? '认知测评' : r.kind === 'memory' ? '空间记忆练习' : '正念练习'}</h2><p>{date(r.date)}{'summary' in r && ' · ' + r.summary}</p></div>{'attempts' in r && <Link to={'/results/' + r.id}>查看详情</Link>}</section>)}</div></>
+  return <><h1>我的记录</h1><label>记录类型<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">全部</option><option value="assessment">测评</option><option value="training">训练</option></select></label>{storageError && <p role="status">部分记录可能无法读取或保存。</p>}{!list.length && <p>还没有记录。</p>}<div className="stack" key={revision}>{list.map(r => <section className="panel row" key={r.id}><div><h2>{'attempts' in r ? '认知测评' : r.kind === 'memory' ? '空间记忆练习' : r.kind === 'cards' ? '记忆翻牌' : '正念练习'}</h2><p>{date(r.date)}{'summary' in r && ' · ' + r.summary}</p></div>{'attempts' in r && <Link to={'/results/' + r.id}>查看详情</Link>}</section>)}</div></>
 }
 function About({ onClear }: { onClear: () => void }) {
   const [message, setMessage] = useState('')
@@ -202,6 +207,6 @@ function App() {
     window.addEventListener('storage', sync)
     return () => window.removeEventListener('storage', sync)
   }, [session?.id])
-  return <><header className="chrome"><div className="row shell"><Link className="brand" to="/">Brain<span>Age</span></Link><nav aria-label="主导航"><Link to="/">首页</Link><Link to="/training">练习</Link><Link to="/history">记录</Link><Link to="/about">关于</Link></nav></div></header><main className="shell"><Routes><Route path="/" element={<Home />} /><Route path="/assessment/setup" element={<Setup start={update} />} /><Route path="/assessment/run" element={<Run session={session} update={update} />} /><Route path="/results/:id" element={<Result />} /><Route path="/training" element={<TrainingMenu />} /><Route path="/training/memory" element={<MemoryTraining />} /><Route path="/training/mindfulness" element={<Mindfulness />} /><Route path="/history" element={<History />} /><Route path="/about" element={<About onClear={() => setSession(undefined)} />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></main></>
+  return <><header className="chrome"><div className="row shell"><Link className="brand" to="/">Brain<span>Age</span></Link><nav aria-label="主导航"><Link to="/">首页</Link><Link to="/training">练习</Link><Link to="/history">记录</Link><Link to="/about">关于</Link></nav></div></header><main className="shell"><Routes><Route path="/" element={<Home />} /><Route path="/assessment/setup" element={<Setup start={update} />} /><Route path="/assessment/run" element={<Run session={session} update={update} />} /><Route path="/results/:id" element={<Result />} /><Route path="/training" element={<TrainingMenu />} /><Route path="/training/memory" element={<MemoryTraining />} /><Route path="/training/cards" element={<MemoryCards onComplete={saveCardGame} />} /><Route path="/training/mindfulness" element={<Mindfulness />} /><Route path="/history" element={<History />} /><Route path="/about" element={<About onClear={() => setSession(undefined)} />} /><Route path="*" element={<Navigate to="/" replace />} /></Routes></main></>
 }
 createRoot(document.getElementById('root')!).render(<HashRouter><App /></HashRouter>)

@@ -1,0 +1,16 @@
+.card-game { max-width: 44rem; margin-inline: auto; }
+.card-setup form { display: grid; gap: .25rem; }
+.card-setup .primary { justify-self: start; }
+.card-scores { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-top: 1rem; }
+.card-scores > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .35rem; padding: .75rem; border: 1px solid #c5d3c8; border-radius: 10px; }
+.card-scores .current { background: #e0ebe1; border-color: #56826a; }
+.card-scores strong { font-variant-numeric: tabular-nums; }
+.card-turn { min-height: 1.7em; margin-block: 1rem; }
+.card-board { display: grid; gap: clamp(.3rem, 1.5vw, .75rem); max-width: 36rem; margin-inline: auto; }
+.playing-card { display: grid; place-content: center; gap: .15rem; aspect-ratio: 4 / 5; min-width: 0; padding: .15rem; border-radius: clamp(6px, 2vw, 12px); text-align: center; touch-action: manipulation; }
+.playing-card[aria-disabled=true] { cursor: default; }
+.playing-card.face-down { color: #e8f4ef; background: #376b53; border-color: #376b53; }
+.playing-card.face-up { color: #203b31; background: #fffdf7; }
+.playing-card.face-up.suit-0, .playing-card.face-up.suit-2 { color: #a3323d; }
+.playing-card strong { font-size: clamp(1rem, 4vw, 2rem); line-height: 1; }
+.playing-card.taken { border: 1px dashed #c5d3c8; }
