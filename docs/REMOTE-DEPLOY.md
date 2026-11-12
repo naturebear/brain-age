@@ -107,6 +107,22 @@ sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile &&
 
 默认 Ubuntu systemd 安装生成的根证书位于 `/var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt`。通过可信渠道把 `root.crt` 传到受控设备，导入系统或浏览器的受信任根证书库。随后访问 `https://实际服务器IP/` 并完成一次测评。面向公众的 IP HTTPS 需要为该公网 IP 签发的公开受信任证书。[Caddy 内部 HTTPS 与根证书位置](https://caddyserver.com/docs/running#local-https)
 
+**无域名，同一台服务器运行多个网站。** 在同一个 Caddyfile 中为每个网站分配一个 HTTPS 端口。已有上面的 BrainAge 站点块时，只追加第二个站点块。将示例 IP 换成客户端实际访问的服务器 IP，并将 `3000` 换成第二个网站的宿主机本地端口。
+
+```caddyfile
+https://203.0.113.10 {
+    tls internal
+    reverse_proxy 127.0.0.1:8080
+}
+
+https://203.0.113.10:8443 {
+    tls internal
+    reverse_proxy 127.0.0.1:3000
+}
+```
+
+确认 Caddy 能监听 TCP 443 和 8443，并在云安全组和主机防火墙中允许访问设备连接这两个端口。两个后端端口继续绑定本机地址。按上文验证并重新加载 Caddy，客户端信任同一个 Caddy 根证书后，通过 `https://实际服务器IP/` 访问 BrainAge，通过 `https://实际服务器IP:8443/` 访问第二个网站。[Caddy 站点地址配置](https://caddyserver.com/docs/caddyfile/concepts#addresses)
+
 **使用域名对外提供服务。** 把域名 A 记录指向服务器公网 IPv4，有公网 IPv6 时再设置 AAAA。在云安全组和主机防火墙放行 TCP 80、443，保留 SSH 管理入口。已有反向代理时，为 BrainAge 域名增加指向 `http://127.0.0.1:8080` 的站点。
 
 新服务器可按官方 Ubuntu 指南安装 Caddy。在 `/etc/caddy/Caddyfile` 中添加以下站点。已有站点配置时追加该块。Caddy 需要能占用 80、443 来提供公开 HTTPS。[Caddy 安装](https://caddyserver.com/docs/install#debian-ubuntu-raspbian) · [自动 HTTPS 的要求](https://caddyserver.com/docs/automatic-https#overview)
