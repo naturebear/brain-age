@@ -83,11 +83,29 @@ sudo docker compose -p brainage-prod -f compose.prod.yaml build \
 
 ### 4. 浏览器访问
 
-**先私下验收。** 在本机另开终端，建立 SSH 转发并保持终端开启。浏览器打开 http://127.0.0.1:18080/。
+**无域名，自己验收。** 通过 SSH 隧道直接访问容器即可。在自己的电脑上另开终端，保持连接开启，然后用浏览器打开 http://127.0.0.1:18080/。
 
 ```bash
 ssh -N -L 127.0.0.1:18080:127.0.0.1:8080 ubuntu@SERVER_IP
 ```
+
+BrainAge 创建测评和练习记录时会调用 `crypto.randomUUID()`，需要浏览器安全上下文。本机回环地址满足该要求。通过服务器 IP 使用普通 HTTP 时，即使首页能打开，测评和记录功能也可能报错。[MDN 安全上下文说明](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) · [randomUUID 文档](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID)
+
+**无域名，多台受控设备通过 IP 访问。** 在服务器安装 Caddy，将以下站点块加入 `/etc/caddy/Caddyfile`。用客户端实际访问的服务器 IP 替换示例地址，并在防火墙放行访问设备到 Caddy 的 TCP 443。容器端口 8080 继续绑定服务器回环地址。[Caddy 安装指南](https://caddyserver.com/docs/install#debian-ubuntu-raspbian)
+
+```caddyfile
+https://203.0.113.10 {
+    tls internal
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+```bash
+sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile &&
+  sudo systemctl reload caddy
+```
+
+默认 Ubuntu systemd 安装生成的根证书位于 `/var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt`。通过可信渠道把 `root.crt` 传到受控设备，导入系统或浏览器的受信任根证书库。随后访问 `https://实际服务器IP/` 并完成一次测评。面向公众的 IP HTTPS 需要为该公网 IP 签发的公开受信任证书。[Caddy 内部 HTTPS 与根证书位置](https://caddyserver.com/docs/running#local-https)
 
 **使用域名对外提供服务。** 把域名 A 记录指向服务器公网 IPv4，有公网 IPv6 时再设置 AAAA。在云安全组和主机防火墙放行 TCP 80、443，保留 SSH 管理入口。已有反向代理时，为 BrainAge 域名增加指向 `http://127.0.0.1:8080` 的站点。
 
@@ -159,7 +177,7 @@ sudo docker compose -p brainage-prod -f compose.prod.yaml up -d --no-build --pul
   curl -fsS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/
 ```
 
-Compose 会根据新镜像重建服务容器。直接执行 `docker compose restart` 只会重启现有容器，仍使用原镜像。看到容器为 healthy、健康端点返回 ok、首页返回 200 后，用实际 HTTPS 域名打开页面并确认核心流程。
+Compose 会根据新镜像重建服务容器。直接执行 `docker compose restart` 只会重启现有容器，仍使用原镜像。看到容器为 healthy、健康端点返回 ok、首页返回 200 后，用部署时选定的 SSH 隧道或受信任的 HTTPS 地址打开页面并确认核心流程。
 
 ### 4. 更新失败时回滚
 
