@@ -44,3 +44,7 @@ docker compose -f compose.prod.yaml down
 生产容器通过 http://127.0.0.1:8080 提供静态站点，宿主机配置 HTTPS 反向代理指向该地址。健康检查路径为 /healthz。目标服务器需要 Docker Compose 和可用的镜像源；跨机器预构建时选择服务器的 Linux CPU 架构。发布时记录提交和镜像标签，保留上一可用标签以便回滚。
 
 测评与训练记录保存在浏览器，同源访问可继续读取。更换域名、协议、端口或浏览器时使用不同存储空间。
+
+## 开源许可证
+
+BrainAge 采用 [MIT 许可证](LICENSE)。
