@@ -48,6 +48,17 @@ sudo docker compose version
 
 ### 3. 构建并启动生产容器
 
+先在服务器同步已有仓库。首次克隆后也可以执行这段命令。确认输出的提交是要部署的版本，再开始构建。若切换分支或拉取失败，先处理本地修改或分支分歧。
+
+```bash
+cd ~/brain-age &&
+  git switch main &&
+  git pull --ff-only origin main &&
+  git log -1 --oneline
+```
+
+默认构建和下方的 ECR 构建都使用这个工作目录中的代码。
+
 ```bash
 cd ~/brain-age
 sudo docker compose -p brainage-prod -f compose.prod.yaml config --quiet
