@@ -141,6 +141,48 @@ curl -fsS https://brainage.example.com/healthz
 
 用实际 HTTPS 域名打开网站并完成一次测评。记录保存在当前浏览器，域名、协议或端口变化会使用不同的存储空间。
 
+#### 排查示例：无域名访问时 TLS 握手失败
+
+通过公网 IP 和自定义端口访问时，`curl` 可能返回以下错误。这个错误发生在 TLS 握手阶段，HTTP 请求尚未转发给应用。
+
+```text
+$ curl -fsS https://203.0.113.10:8897/healthz
+curl: (35) error:14077438:SSL routines:SSL23_GET_SERVER_HELLO:tlsv1 alert internal error
+```
+
+先确认端口由 Caddy 监听，再检查 Caddy 日志和后端健康状态。将示例 IP 和端口替换为实际访问地址。
+
+```bash
+sudo ss -ltnp 'sport = :8897'
+sudo journalctl -u caddy -n 80 --no-pager
+curl -fsS http://127.0.0.1:8080/healthz
+```
+
+如果 `8897` 由 Caddy 监听，日志出现 `no certificate available` 并指向内网 IP，可能是云平台通过 NAT 把公网 IP 映射到了内网接口。客户端直接访问 IP 时通常不发送 SNI，Caddy 可能按内网 IP 查找证书。此时在 Caddyfile 顶部的全局块中设置 `default_sni`，值使用证书对应的公网 IP，不带端口。已有全局块或同地址站点块时，在对应块内修改配置。[Caddy 默认 SNI 配置](https://caddyserver.com/docs/caddyfile/options#default-sni) · [NAT 下的同类问题](https://github.com/caddyserver/caddy/issues/7526)
+
+```caddyfile
+{
+    default_sni 203.0.113.10
+}
+
+https://203.0.113.10:8897 {
+    tls internal
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+`default_sni` 是全局设置，影响同一 Caddy 实例上未发送 SNI 的连接。检查配置并重新加载，然后用内部根证书验证代理。[Caddy 内部根证书路径](https://caddyserver.com/docs/running#local-https)
+
+```bash
+sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile &&
+  sudo systemctl reload caddy &&
+  sudo curl -fsS \
+    --cacert /var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt \
+    https://203.0.113.10:8897/healthz
+```
+
+返回 `ok` 表示 TLS 验证与反向代理均通过。如果 `8897` 由其他进程监听，先确认实际的 HTTPS 入口。如果 Caddy 日志显示其他握手错误，按该错误继续排查。后端健康检查失败时，检查 BrainAge 容器状态和日志。
+
 ## 版本更新部署指南
 
 **通常可以在服务运行时更新代码和构建镜像。** 当前生产容器使用镜像内的静态文件，Git 拉取和镜像构建期间会继续提供旧版本。构建成功后，由 Compose 替换容器。BrainAge 使用单容器和固定端口，替换时可能短暂中断。保留反向代理运行。
