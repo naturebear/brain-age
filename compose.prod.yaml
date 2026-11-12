@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       target: production
+      args:
+        BRAINAGE_IMAGE_PREFIX: ${BRAINAGE_IMAGE_PREFIX:-docker.io/library/}
     ports:
       - "127.0.0.1:8080:80"
     restart: unless-stopped

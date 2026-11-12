@@ -60,12 +60,12 @@ curl -fsS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/
 
 构建先用 Node 安装锁定依赖并生成网页，再把产物复制到 Nginx 镜像。验收时容器应显示 healthy，健康端点返回 ok，首页返回 200。端口 8080 绑定到服务器回环地址。
 
-若 Docker Hub 拉取令牌超时，可使用 Docker 在 Amazon ECR Public 发布的同版本基础镜像。以下命令通过标准输入替换构建时的镜像地址，产物名匹配 Compose 项目默认镜像名。完成后执行上面的 up 和检查命令。[Docker 的 ECR Public 镜像仓库](https://gallery.ecr.aws/docker/)
+若连接 Docker Hub 的 registry-1.docker.io 或 auth.docker.io 超时，可通过构建参数使用 Docker 在 Amazon ECR Public 发布的同版本基础镜像。构建成功后执行上面的 up 和检查命令。[Docker 的 ECR Public 镜像仓库](https://gallery.ecr.aws/docker/)
 
 ```bash
 cd ~/brain-age
-sed -E 's@^FROM (node:|nginx:)@FROM public.ecr.aws/docker/library/\1@' apps/web/Dockerfile |
-  sudo docker build --target production -t brainage-prod-web:latest -f - .
+sudo docker compose -p brainage-prod -f compose.prod.yaml build \
+  --build-arg BRAINAGE_IMAGE_PREFIX=public.ecr.aws/docker/library/
 ```
 
 若服务器也无法访问 npm，可在网络可达、CPU 架构匹配的机器构建同名镜像，用 `docker image save -o brainage-prod-web.tar brainage-prod-web:latest` 导出，传到服务器后用 `sudo docker image load -i brainage-prod-web.tar` 导入，再执行第 3 节的 up 命令并追加 `--pull never`。
